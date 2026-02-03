@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Guess, Lobby, Player } from "./types";
+import type { Lobby, Player } from "./types";
 import { listen, submitGuess, startGame, leaveLobby } from "./api";
 
 export default function GameScreen({
@@ -12,39 +12,45 @@ export default function GameScreen({
   setLobby: (l: Lobby) => void;
 }) {
   const [guess, setGuess] = useState("");
-  const [trophies, setTrophies] = useState<Record<string, number>>({});
+  const [points, setPoints] = useState<Record<string, number>>({});
   const [prevWinners, setPrevWinners] = useState<string[]>([]);
 
   const lobbyRef = useRef(lobby);
   const playerRef = useRef(player);
 
-  // SSE listener
+  /* ===================== SSE ===================== */
   useEffect(() => {
-    const es = listen(lobby.id, player.id, (updatedLobby: Lobby) => {
+    const es = listen(lobby.id, player.id, (data: { lobby: Lobby }) => {
+      const updatedLobby = data.lobby;
+      if (!updatedLobby) return;
+
       if (updatedLobby.turnIndex >= updatedLobby.players.length) {
         updatedLobby.turnIndex = 0;
       }
 
       setLobby(updatedLobby);
 
-      const t = { ...trophies };
-      updatedLobby.players.forEach(p => {
-        t[p.id] ??= 0;
+      setPoints(prev => {
+        const next = { ...prev };
+        updatedLobby.players.forEach(p => {
+          if (next[p.id] == null) next[p.id] = 0;
+        });
+
+        const newWinners = updatedLobby.winners.filter(
+          w => !prevWinners.includes(w)
+        );
+
+        newWinners.forEach(w => (next[w] += 10));
+        return next;
       });
 
-      const newWins = updatedLobby.winners.filter(
-        w => !prevWinners.includes(w)
-      );
-      newWins.forEach(w => {
-        t[w] += 1;
-      });
-
-      if (newWins.length) setPrevWinners(updatedLobby.winners);
-      setTrophies(t);
+      if (updatedLobby.winners.length !== prevWinners.length) {
+        setPrevWinners(updatedLobby.winners);
+      }
     });
 
     return () => es.close();
-  }, [lobby.id]);
+  }, [lobby.id, player.id, prevWinners]);
 
   useEffect(() => {
     lobbyRef.current = lobby;
@@ -52,9 +58,7 @@ export default function GameScreen({
   }, [lobby, player]);
 
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
+    const handleBeforeUnload = () => {
       const l = lobbyRef.current;
       const p = playerRef.current;
       if (l && p) leaveLobby(l.id, p.id);
@@ -68,121 +72,265 @@ export default function GameScreen({
   const myTurn = currentPlayer?.id === player.id;
 
   async function submit() {
-    if (!guess) return;
+    if (!guess || !myTurn) return;
     await submitGuess(lobby.id, player.id, guess);
     setGuess("");
   }
 
+  /* ===================== UI ===================== */
   return (
     <>
       <style>{`
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: #f9fafc; }
-        .page { display: flex; justify-content: center; padding: 24px; }
-        .card { max-width: 700px; width: 100%; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .lobbyTag { font-size: 12px; background: #e5e7eb; color: #374151; padding: 4px 10px; border-radius: 999px; }
-        .title { font-size: 20px; font-weight: 700; margin: 6px 0; }
-        .turn { font-size: 14px; color: #2563eb; margin-top: 4px; }
-        .players { display: flex; gap: 8px; }
-        .player { font-size: 13px; padding: 6px 10px; border-radius: 999px; background: #f1f5f9; display: flex; align-items: center; gap: 6px; }
-        .player.active { background: #2563eb; color: white; }
-        .content { display: flex; gap: 16px; flex-wrap: wrap; }
-        .panel { flex: 1; min-width: 250px; background: #f8fafc; border-radius: 12px; padding: 16px; }
-        .panel h4 { font-size: 12px; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 12px; }
-        .guessRow { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-radius: 8px; background: #fff; font-size: 13px; border: 1px solid #e5e7eb; margin-bottom: 8px; }
-        .guessRow.me { border-color: #2563eb; }
-        .mono { font-family: ui-monospace, monospace; }
-        .inputRow { display: flex; gap: 8px; margin-top: 12px; }
-        input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 14px; }
-        button { border: none; padding: 10px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; background: #2563eb; color: white; }
-        button.secondary { width: 100%; background: #10b981; margin-top: 16px; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .rules { font-size: 13px; color: #374151; line-height: 1.5; }
-        .footer { margin-top: 20px; font-size: 12px; color: #6b7280; display: flex; justify-content: space-between; }
-        @media (max-width: 600px) { .content { flex-direction: column; } }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: radial-gradient(circle at top, #0f172a, #020617);
+  color: #e5e7eb;
+}
+
+/* ---------- Layout ---------- */
+.game {
+  max-width: 1100px;
+  margin: auto;
+  padding: 16px;
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.subtitle {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.lobbyTag {
+  font-size: 11px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+}
+
+/* ---------- Players ---------- */
+.players {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.playerCard {
+  padding: 14px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #020617, #020617) padding-box,
+              linear-gradient(145deg, #2563eb, #22d3ee) border-box;
+  border: 1px solid transparent;
+}
+
+.playerCard.active {
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.playerName {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.playerStatus {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+/* ---------- Main ---------- */
+.main {
+  display: grid;
+  gap: 16px;
+}
+
+/* ---------- Guess History ---------- */
+.panel {
+  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.panelTitle {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  opacity: 0.6;
+  margin-bottom: 10px;
+}
+
+.guessRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.guessRow.me {
+  outline: 1px solid #2563eb;
+}
+
+.mono {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.15em;
+}
+
+/* ---------- Input ---------- */
+.inputRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+input {
+  flex: 1;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 12px;
+  color: white;
+  font-size: 14px;
+}
+
+button {
+  background: linear-gradient(135deg, #2563eb, #22d3ee);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Rules ---------- */
+.rules {
+  font-size: 13px;
+  line-height: 1.6;
+  opacity: 0.85;
+}
+
+/* ---------- Footer ---------- */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  opacity: 0.5;
+  margin-top: 14px;
+}
+
+/* ---------- Desktop ---------- */
+@media (min-width: 768px) {
+  .main {
+    grid-template-columns: 2fr 1fr;
+  }
+}
       `}</style>
 
-      <div className="page">
-        <div className="card">
-          <div className="header">
-            <div>
-              <div className="lobbyTag">LOBBY {lobby.id}</div>
-              <div className="title">{lobby.codeLength}-digit mastermind</div>
-              <div className="turn">{myTurn ? "Your turn" : `Turn: ${currentPlayer?.name}`}</div>
-            </div>
-
-            <div className="players">
-              {lobby.players.map((p, i) => (
-                <div
-                  key={p.id}
-                  className={`player ${i === lobby.turnIndex && lobby.started ? "active" : ""}`}
-                >
-                  {p.name}
-                  {Array.from({ length: trophies[p.id] || 0 }).map((_, i) => (
-                    <span key={i}>🏆</span>
-                  ))}
-                </div>
-              ))}
-            </div>
+      <div className="game">
+        <div className="topBar">
+          <div>
+            <div className="title">{lobby.codeLength}-Digit Mastermind</div>
+            <div className="subtitle">Code breaking in progress</div>
           </div>
+          <div className="lobbyTag">LOBBY {lobby.id}</div>
+        </div>
 
-          <div className="content">
-            {/* Guess History */}
-            <div className="panel">
-              <h4>GUESS HISTORY</h4>
-              {lobby.players.map(playerItem => {
-                if (!lobby.showAllGuesses && playerItem.id !== player.id) return null;
-
-                return playerItem.guesses.map((g, i) => (
-                  <div key={`${playerItem.id}-${i}`} className={`guessRow ${playerItem.id === player.id ? "me" : ""}`}>
-                    <span className="mono">#{i + 1} {g.value.split("").join(" ")}</span>
-                    <span>{g.correctPositions} pos / {g.correctDigits} digit</span>
-                  </div>
-                ));
-              })}
-
-              {lobby.started && myTurn && (
-                <div className="inputRow">
-                  
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={guess}
-                    onChange={e => {
-                      const onlyDigits = e.target.value.replace(/\D/g, "");
-                      setGuess(onlyDigits.slice(0, lobby.codeLength));
-                    }}
-                    maxLength={lobby.codeLength}
-                    placeholder={`Enter ${lobby.codeLength}-digit guess`}
-                  />
-                  <button onClick={submit}>Guess ↵</button>
-                </div>
-              )}
-            </div>
-
-            {/* Rules */}
-            <div className="panel">
-              <h4>RULES</h4>
-              <div className="rules">
-                • {lobby.codeLength} unique digits between 0 and 9<br />
-                • <b>pos</b> = correct digit in correct spot<br />
-                • <b>digit</b> = correct digit, wrong spot<br /><br />
-                Real-time multiplayer • SSE powered
+        <div className="players">
+          {lobby.players.map((p, i) => (
+            <div
+              key={p.id}
+              className={`playerCard ${
+                i === lobby.turnIndex && lobby.started ? "active" : ""
+              }`}
+            >
+              <div className="playerName">
+                {p.id === player.id ? "You" : p.name}
+              </div>
+              <div className="playerStatus">
+                {i === lobby.turnIndex ? "Thinking..." : "Waiting..."} •{" "}
+                {points[p.id] || 0} pts
               </div>
             </div>
-          </div>
-
-          <div className="footer">
-            <span>⚡ Fast, low-latency turns</span>
-            <span>Best of {lobby.numGames} rounds</span>
-          </div>
-
-          {!lobby.started && !lobby.winners.length && (
-            <button className="secondary" onClick={() => startGame(lobby.id)}>Start Game</button>
-          )}
+          ))}
         </div>
+
+        <div className="main">
+          <div className="panel">
+            <div className="panelTitle">GUESS HISTORY</div>
+
+            {lobby.players.map(p =>
+              p.guesses.map((g, i) => (
+                <div
+                  key={p.id + i}
+                  className={`guessRow ${p.id === player.id ? "me" : ""}`}
+                >
+                  <span className="mono">{g.value.split("").join(" ")}</span>
+                  <span>
+                    {g.result.correctPositions} pos /{" "}
+                    {g.result.correctDigits} digit
+                  </span>
+                </div>
+              ))
+            )}
+
+            {lobby.started && myTurn && (
+              <div className="inputRow">
+                <input
+                  inputMode="numeric"
+                  value={guess}
+                  onChange={e =>
+                    setGuess(
+                      e.target.value.replace(/\D/g, "").slice(0, lobby.codeLength)
+                    )
+                  }
+                  placeholder={`Enter ${lobby.codeLength} digits`}
+                />
+                <button onClick={submit}>Guess</button>
+              </div>
+            )}
+          </div>
+
+          <div className="panel">
+            <div className="panelTitle">GAME RULES</div>
+            <div className="rules">
+              Guess <b>{lobby.codeLength} unique digits</b> (0–9)<br />
+              <b>pos</b> → correct digit & position<br />
+              <b>digit</b> → correct digit, wrong spot<br />
+              Points rewarded for speed & accuracy
+            </div>
+          </div>
+        </div>
+
+        <div className="footer">
+          <span>⚡ Low latency</span>
+          <span>Best of {lobby.numGames}</span>
+        </div>
+
+        {!lobby.started && !lobby.winners.length && (
+          <button style={{ width: "100%", marginTop: 16 }} onClick={() => startGame(lobby.id)}>
+            Start Game
+          </button>
+        )}
       </div>
     </>
   );

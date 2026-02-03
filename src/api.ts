@@ -1,4 +1,5 @@
-const BASE = "https://sse-mastermind-game-backend-chinmays-projects-d0b166cf.vercel.app";
+const BASE = "http://localhost:4000";
+// const BASE = "https://sse-mastermind-game-backend-production.up.railway.app";
 
 
   export function createLobby(
@@ -52,7 +53,7 @@ export function restartGame(lobbyId: string) {
 }
 
 export function leaveLobby(lobbyId: string, playerId: string) {
-  return fetch(`https://sse-mastermind-game-backend-chinmays-projects-d0b166cf.vercel.app/lobby/${lobbyId}/leave`, {
+  return fetch(`http://localhost:4000/lobby/${lobbyId}/leave`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ playerId })
@@ -60,15 +61,18 @@ export function leaveLobby(lobbyId: string, playerId: string) {
 }
 
 
-export function listen(lobbyId: string, playerId: string, cb: any) {
+export function listen(
+  lobbyId: string,
+  playerId: string,
+  onMessage: (data: any) => void
+) {
   const es = new EventSource(
     `${BASE}/lobby/${lobbyId}/stream?playerId=${playerId}`
   );
 
-  es.onmessage = e => {
-    const data = JSON.parse(e.data);
-    cb(data.lobby);
+  es.onmessage = (e) => {
+    onMessage(JSON.parse(e.data));
   };
 
-  return es;
+  return es; // 👈 important
 }

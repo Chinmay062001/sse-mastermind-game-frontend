@@ -32,12 +32,15 @@ export default function LobbyScreen({
   return (
     <>
       <style>{`
-        * { box-sizing: border-box; }
+        * {
+          box-sizing: border-box;
+        }
 
         body {
           margin: 0;
           font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-          background: #f5f7fb;
+          background: radial-gradient(1200px 600px at top, #1b235a, #050814);
+          color: #e5e7eb;
         }
 
         .page {
@@ -49,134 +52,151 @@ export default function LobbyScreen({
 
         .card {
           width: 100%;
-          max-width: 380px;
-          background: white;
-          border-radius: 16px;
-          padding: 24px;
-          box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-          text-align: center;
+          max-width: 420px;
+          background: linear-gradient(
+            180deg,
+            rgba(255,255,255,0.08),
+            rgba(255,255,255,0.02)
+          );
+          border-radius: 20px;
+          padding: 28px 24px;
+          backdrop-filter: blur(18px);
+          box-shadow:
+            0 20px 60px rgba(0,0,0,0.45),
+            inset 0 1px 0 rgba(255,255,255,0.08);
         }
 
-        .icon {
-          width: 48px;
-          height: 48px;
-          margin: 0 auto 12px;
-          border-radius: 12px;
-          background: #2f80ed;
+        .logo {
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          margin: 0 auto 14px;
+          background: linear-gradient(135deg, #7dd3fc, #a855f7);
           display: grid;
           place-items: center;
-          color: white;
-          font-size: 22px;
+          font-size: 26px;
         }
 
         h1 {
           margin: 0;
-          font-size: 22px;
+          text-align: center;
+          font-size: 24px;
           font-weight: 700;
+          letter-spacing: 0.4px;
         }
 
         .subtitle {
-          margin: 6px 0 20px;
+          text-align: center;
+          margin: 6px 0 22px;
           font-size: 14px;
-          color: #6b7280;
+          color: #9ca3af;
+        }
+
+        .section {
+          margin-bottom: 18px;
+        }
+
+        .label {
+          font-size: 11px;
+          letter-spacing: 0.08em;
+          color: #94a3b8;
+          margin-bottom: 6px;
         }
 
         .input {
           width: 100%;
-          padding: 10px 12px;
-          border-radius: 8px;
-          border: 1px solid #e5e7eb;
+          padding: 12px 14px;
+          border-radius: 10px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(0,0,0,0.35);
+          color: white;
           font-size: 14px;
-          margin-bottom: 12px;
         }
 
         .input:focus {
           outline: none;
-          border-color: #2f80ed;
+          border-color: #7dd3fc;
         }
 
-        .settings {
-          background: #f1f6fb;
-          border-radius: 10px;
-          padding: 12px;
-          margin-bottom: 16px;
-          text-align: left;
-        }
-
-        .settings h4 {
-          font-size: 12px;
-          margin: 0 0 10px;
-          color: #6b7280;
-          letter-spacing: .05em;
+        .config {
+          background: rgba(0,0,0,0.35);
+          border-radius: 14px;
+          padding: 14px;
+          margin-top: 10px;
         }
 
         .row {
-          display: flex;
-          gap: 10px;
-          margin-bottom: 10px;
-        }
-
-        .row label {
-          font-size: 12px;
-          color: #374151;
-          display: flex;
-          flex-direction: column;
-          flex: 1;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-bottom: 12px;
         }
 
         .checkbox {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 13px;
-          color: #374151;
+          gap: 10px;
+          font-size: 14px;
+          color: #cbd5f5;
         }
 
-        button {
-          cursor: pointer;
-          border: none;
-          font-size: 14px;
-          font-weight: 600;
+        .checkbox input {
+          accent-color: #7dd3fc;
         }
 
         .primary {
           width: 100%;
-          padding: 12px;
-          background: #2f80ed;
-          color: white;
-          border-radius: 10px;
+          margin-top: 18px;
+          padding: 14px;
+          border-radius: 14px;
+          border: none;
+          font-size: 15px;
+          font-weight: 600;
+          color: #050814;
+          background: linear-gradient(135deg, #7dd3fc, #a855f7);
+          cursor: pointer;
         }
 
         .primary:disabled {
-          opacity: .4;
+          opacity: 0.5;
           cursor: not-allowed;
         }
 
         .divider {
-          margin: 16px 0;
+          margin: 22px 0 14px;
+          text-align: center;
           font-size: 12px;
           color: #9ca3af;
         }
 
         .joinRow {
           display: flex;
-          gap: 8px;
+          gap: 10px;
         }
 
         .secondary {
-          padding: 10px 14px;
-          background: #eef2f7;
-          border-radius: 8px;
+          padding: 12px 16px;
+          border-radius: 10px;
+          border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(255,255,255,0.04);
+          color: white;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .secondary:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
         }
 
         .footer {
-          margin-top: 14px;
+          margin-top: 20px;
           font-size: 12px;
-          color: #6b7280;
+          color: #9ca3af;
           display: flex;
-          justify-content: center;
           align-items: center;
-          gap: 6px;
+          justify-content: center;
+          gap: 8px;
         }
 
         .dot {
@@ -185,65 +205,65 @@ export default function LobbyScreen({
           background: #22c55e;
           border-radius: 50%;
         }
+
+        @media (min-width: 640px) {
+          .card {
+            padding: 32px;
+          }
+        }
       `}</style>
 
       <div className="page">
         <div className="card">
-          <div className="icon">🎯</div>
+          <div className="logo">🎯</div>
 
-          <h1>Mastermind</h1>
-          <p className="subtitle">Guess the code. Beat the lobby.</p>
+          <h1>MASTERMIND</h1>
+          <p className="subtitle">Crack the code. Outsmart the lobby.</p>
 
-          <input
-            className="input"
-            placeholder="Your name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-          />
+          <div className="section">
+            <div className="label">PLAYER NAME</div>
+            <input
+              className="input"
+              placeholder="Enter your name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
 
-          <div className="settings">
-            <h4>LOBBY SETTINGS</h4>
+          <div className="section">
+            <div className="label">MATCH CONFIGURATION</div>
 
-            <div className="row">
-              <label>
-                Rounds
+            <div className="config">
+              <div className="row">
                 <input
                   type="number"
-                  min={1}
                   className="input"
                   value={numGames}
                   onChange={e => setNumGames(+e.target.value)}
+                  placeholder="Rounds"
                 />
-              </label>
-
-              <label>
-                Winners / round
                 <input
                   type="number"
-                  min={1}
                   className="input"
                   value={maxWinners}
                   onChange={e => setMaxWinners(+e.target.value)}
+                  placeholder="Winners / round"
                 />
+              </div>
+
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={showAllGuesses}
+                  onChange={e => setShowAllGuesses(e.target.checked)}
+                />
+                Public guesses (Easy mode)
               </label>
             </div>
-
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={showAllGuesses}
-                onChange={e => setShowAllGuesses(e.target.checked)}
-              />
-              Show all guesses
-            </label>
           </div>
 
-          <button
-            className="primary"
-            onClick={create}
-            disabled={!name}
-          >
-            Create Lobby
+          <button className="primary" onClick={create} disabled={!name}>
+            Initialize Lobby
           </button>
 
           <div className="divider">OR JOIN EXISTING</div>
@@ -266,7 +286,7 @@ export default function LobbyScreen({
 
           <div className="footer">
             <span className="dot" />
-            Real-time multiplayer • SSE powered
+            Systems Online • SSE Connected
           </div>
         </div>
       </div>
