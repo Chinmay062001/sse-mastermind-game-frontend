@@ -1,5 +1,5 @@
-const BASE = "http://localhost:4000";
-// const BASE = "https://sse-mastermind-game-backend-production.up.railway.app";
+// const BASE = "http://localhost:4000";
+const BASE = "https://sse-mastermind-game-backend-production.up.railway.app";
 
 
   export function createLobby(
